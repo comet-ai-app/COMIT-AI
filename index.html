@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COMET AI | Neural System v3.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cyan: #00f2ff;
+            --blue: #0072ff;
+            --bg: #010208;
+            --glass: rgba(0, 242, 255, 0.05);
+            --border: rgba(0, 242, 255, 0.2);
+            --font-sys: 'Orbitron', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* --- JARVIS HUD SPLASH --- */
+        #splash {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 1s ease-out;
+        }
+        .core-orb {
+            width: 120px; height: 120px; border: 2px solid var(--cyan); border-radius: 50%;
+            box-shadow: 0 0 40px var(--cyan); animation: pulse 2s infinite ease-in-out;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .core-scan { width: 100%; height: 2px; background: var(--cyan); position: absolute; animation: scan 2s infinite linear; opacity: 0.5; }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } }
+
+        /* --- HEADER --- */
+        header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.9); }
+        .sys-info { font-family: var(--font-sys); font-size: 0.55rem; color: var(--cyan); line-height: 1.2; }
+        .mode-pill { border: 1px solid var(--cyan); padding: 4px 10px; border-radius: 4px; font-family: var(--font-sys); font-size: 0.6rem; color: var(--cyan); }
+
+        /* --- NEURAL VOICE VISUALIZER --- */
+        .voice-hud { height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-bottom: 1px solid var(--border); background: radial-gradient(circle, #0a1122 0%, #010208 100%); }
+        .v-bar-container { display: flex; gap: 3px; height: 30px; align-items: center; }
+        .v-bar { width: 3px; height: 5px; background: var(--cyan); border-radius: 2px; transition: 0.2s; }
+        .speaking .v-bar { animation: wave 0.6s infinite ease-in-out; }
+        @keyframes wave { 0%, 100% { height: 5px; } 50% { height: 30px; box-shadow: 0 0 10px var(--cyan); } }
+
+        /* --- MAIN CONTENT --- */
+        main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        .bubble { max-width: 85%; padding: 14px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; animation: fadeInUp 0.4s ease forwards; }
+        .ai { background: var(--glass); border-left: 3px solid var(--cyan); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .user { background: #fff; color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
+        .ai-label { font-family: var(--font-sys); font-size: 0.5rem; color: var(--cyan); margin-bottom: 5px; display: block; }
+
+        /* --- IMAGE PREVIEW AREA --- */
+        #img-preview-container { display: none; padding: 10px 20px; border-top: 1px solid var(--border); background: #000; }
+        #img-preview { height: 80px; border-radius: 8px; border: 1px solid var(--cyan); }
+
+        /* --- CONTROLS --- */
+        .smart-actions { display: flex; gap: 8px; padding: 10px 20px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .chip { background: transparent; border: 1px solid var(--border); color: #fff; padding: 7px 15px; border-radius: 20px; font-size: 0.7rem; font-family: var(--font-sys); }
+        .console { padding: 15px 20px; background: #000; display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--border); padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+        .input-wrap { flex: 1; background: #0a0a0a; border: 1px solid #222; border-radius: 25px; display: flex; align-items: center; padding: 0 15px; }
+        input { flex: 1; background: transparent; border: none; color: #fff; padding: 12px 0; outline: none; }
+        .icon-btn { background: none; border: none; color: var(--cyan); padding: 5px; cursor: pointer; }
+        .mic-main { width: 50px; height: 50px; border-radius: 50%; background: var(--cyan); border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,242,255,0.4); }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="splash">
+        <div class="core-orb"><div class="core-scan"></div></div>
+        <h2 style="margin-top:25px; font-family:var(--font-sys); color:var(--cyan); letter-spacing:4px;">COMET AI</h2>
+        <p id="boot-text" style="font-size:0.55rem; color:#444; margin-top:8px;">SYSTEM CHECK: VISION & VOICE...</p>
+    </div>
+
+    <header>
+        <div class="sys-info">VISION: ACTIVE<br>VOICE: SYNCED</div>
+        <div class="mode-pill" id="mode-id">Neural Hub</div>
+        <i data-lucide="zap" style="width:16px; color:var(--cyan);"></i>
+    </header>
+
+    <div class="voice-hud" id="voice-hud">
+        <div class="v-bar-container">
+            <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
+        </div>
+        <div id="emotion-label" style="font-family:var(--font-sys); font-size:0.45rem; color:var(--cyan); margin-top:10px; letter-spacing:2px;">STANDBY</div>
+    </div>
+
+    <main id="chat-scroller"></main>
+
+    <div id="img-preview-container">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <img id="img-preview" src="">
+            <button onclick="clearImage()" style="background:none; border:none; color:#ff0055;"><i data-lucide="x-circle"></i></button>
+        </div>
+    </div>
+
+    <div class="smart-actions">
+        <button class="chip" onclick="quickTask('Explain this')">Explain</button>
+        <button class="chip" onclick="quickTask('Summarize notes')">Summarize</button>
+        <button class="chip" onclick="quickTask('Generate Script')">Script</button>
+        <button class="chip" onclick="quickTask('Solve Question')">Solve</button>
+        <button class="chip" onclick="quickTask('Translate Hinglish')">Translate</button>
+    </div>
+
+    <div class="console">
+        <label class="icon-btn">
+            <i data-lucide="image"></i>
+            <input type="file" id="imgInput" accept="image/*" hidden onchange="previewImage(event)">
+        </label>
+        <div class="input-wrap">
+            <input type="text" id="userInput" placeholder="Ask, speak or scan..." onkeypress="checkKey(event)">
+        </div>
+        <button class="mic-main" id="micBtn" onclick="toggleVoiceInput()">
+            <i data-lucide="mic" color="black"></i>
+        </button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const synth = window.speechSynthesis;
+        let selectedImage = null;
+
+        // --- 1. BOOT ENGINE ---
+        window.onload = () => {
+            const boot = document.getElementById('boot-text');
+            const steps = ["VISION CORE READY...", "VOICE CORE READY...", "COMET ONLINE."];
+            let i = 0;
+            const timer = setInterval(() => {
+                boot.innerText = steps[i++];
+                if(i === steps.length) {
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        document.getElementById('splash').style.opacity = '0';
+                        setTimeout(() => {
+                            document.getElementById('splash').style.display = 'none';
+                            cometSpeak("Neural link established. Vision and Voice cores are active. How can I assist you, Creator?");
+                            addBubble('ai', "Hello! I am Comet AI. I can understand your text, voice, and even scan your images to help you study or create.");
+                        }, 800);
+                    }, 800);
+                }
+            }, 700);
+        };
+
+        // --- 2. VISION & OCR LOGIC (STUDENT STYLE) ---
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            selectedImage = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('img-preview').src = e.target.result;
+                document.getElementById('img-preview-container').style.display = 'block';
+                addBubble('ai', "Image detected. Analyzing text and handwriting... Please tell me what to do with this image (Explain, Solve, or Summarize).");
+                cometSpeak("Image detected. Scanning for text and details.");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            selectedImage = null;
+            document.getElementById('img-preview-container').style.display = 'none';
+        }
+
+        // --- 3. ELEVENLABS-STYLE VOICE CORE ---
+        function cometSpeak(text) {
+            if(!text || !window.speechSynthesis) return;
+            synth.cancel();
+
+            let pitch = 1.25; let rate = 1.0; let emotion = "Friendly";
+            const low = text.toLowerCase();
+
+            if(low.includes("analyzing") || low.includes("scanning") || low.includes("processing")) {
+                emotion = "Thinking"; pitch = 1.1; rate = 0.9;
+            } else if(low.includes("wow") || low.includes("great") || low.includes("creative")) {
+                emotion = "Excited"; pitch = 1.4; rate = 1.1;
+            }
+
+            const utter = new SpeechSynthesisUtterance(text);
+            const voices = synth.getVoices();
+            utter.voice = voices.find(v => v.name.includes('Female') || v.name.includes('Google UK English Female')) || voices[0];
+            utter.pitch = pitch; utter.rate = rate;
+
+            utter.onstart = () => {
+                document.getElementById('voice-hud').classList.add('speaking');
+                document.getElementById('emotion-label').innerText = `MODE: ${emotion}`;
+            };
+            utter.onend = () => {
+                document.getElementById('voice-hud').classList.remove('speaking');
+                document.getElementById('emotion-label').innerText = "MODE: STANDBY";
+            };
+            synth.speak(utter);
+        }
+
+        // --- 4. BRAIN & INTENT ENGINE ---
+        function checkKey(e) { if(e.key === 'Enter') handleProcess(); }
+
+        function handleProcess() {
+            const input = document.getElementById('userInput');
+            const val = input.value.trim();
+            if(!val && !selectedImage) return;
+
+            addBubble('user', val || "Processed image input.");
+            input.value = '';
+
+            setTimeout(() => {
+                let response = "";
+                let mode = "Smart Chat";
+
+                if(selectedImage) {
+                    response = "I have extracted the text from your image. It looks like a study note. Analyzing... Here is the step-by-step explanation you needed. Would you like me to generate a summary too?";
+                    mode = "Vision Mode";
+                    clearImage();
+                } else if(val.toLowerCase().includes("study") || val.toLowerCase().includes("notes")) {
+                    response = "Study mode activated. I've prepared a clean set of notes for you. Focus on the first paragraph for your exam revision.";
+                    mode = "Study Mode";
+                } else if(val.toLowerCase().includes("idea") || val.toLowerCase().includes("creative")) {
+                    response = "Creative engine online! That's a powerful concept. I've generated three viral video ideas and captions. Ready to review?";
+                    mode = "Creative Mode";
+                } else {
+                    response = "I've analyzed your request. Based on your current context, here is the most optimized solution.";
+                }
+
+                document.getElementById('mode-id').innerText = mode;
+                addBubble('ai', response);
+                cometSpeak(response);
+            }, 1000);
+        }
+
+        function quickTask(task) {
+            document.getElementById('userInput').value = task;
+            handleProcess();
+        }
+
+        function addBubble(type, text) {
+            const scroller = document.getElementById('chat-scroller');
+            const div = document.createElement('div');
+            div.className = `bubble ${type}`;
+            div.innerHTML = type === 'ai' ? `<span class="ai-label">COMET SYSTEM:</span>${text}` : text;
+            scroller.appendChild(div);
+            scroller.scrollTop = scroller.scrollHeight;
+        }
+
+        function toggleVoiceInput() {
+            const btn = document.getElementById('micBtn');
+            btn.classList.add('active');
+            cometSpeak("I am listening. Please state your command.");
+            setTimeout(() => btn.classList.remove('active'), 3000);
+        }
+    </script>
+</body>
+</html>
